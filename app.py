@@ -55,11 +55,25 @@ student_preferences_df = pd.DataFrame([student_preferences])
 # Scale the user input using the same scaler
 student_preferences_scaled = scaler.transform(student_preferences_df)
 
-# Find the nearest neighbors
-distances, indices = model.kneighbors(student_preferences_scaled)
+# Compute distances to all data points
+all_distances = np.linalg.norm(df_scaled - student_preferences_scaled, axis=1)
 
-# Get the recommended universities
-recommended_universities = df_clean.iloc[indices[0]]
+# Normalize and convert distances to scores
+max_distance = np.max(all_distances)
+scores = 100* (1 - (all_distances / max_distance))
+
+# Add scores to the DataFrame
+df_clean['Score'] = scores
+
+# Sort the DataFrame by scores in descending order
+recommended_universities = df_clean.sort_values(by='Score', ascending=False).reset_index(drop=True)
+
+# Reorder columns to put Score after Name
+cols = ['Name', 'Score'] + [col for col in recommended_universities.columns if col not in ['Name', 'Score']]
+recommended_universities = recommended_universities[cols]
+
+# Adjust the index to start from 1
+recommended_universities.index = recommended_universities.index + 1
 
 # Create a dictionary for renaming columns
 rename_columns = {
@@ -70,11 +84,12 @@ rename_columns = {
     'S.F.Ratio': 'Student-Faculty Ratio',
     'Grad.Rate': 'Graduation Rate',
     'Accept.Rate': 'Acceptance Rate',
-    'Total.Cost': 'Total Cost'
+    'Total.Cost': 'Total Cost',
+    'Score': 'Score'
 }
 
 # Rename the columns for display
 recommended_universities_display = recommended_universities.rename(columns=rename_columns)
 
 st.header('Recommended Universities:')
-st.write(recommended_universities_display)
+st.write(recommended_universities_display.head(10))
